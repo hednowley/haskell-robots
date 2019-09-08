@@ -1,5 +1,5 @@
 module Lib
-    ( someFunc
+    ( start
     ) where
 
 import System.Environment   
@@ -7,28 +7,28 @@ import System.IO
 import Data.List
 import Parse
 import Walk
+import Print
 
-
-someFunc :: IO ()
-someFunc = do  
+-- Entry point
+start :: IO ()
+start = do  
     args <- getArgs
-    process args
-
-process :: [String] -> IO ()
-process args =
-    case (maybeHead args) of
+    case maybeHead args of
         Nothing -> putStrLn "No path given"
-        Just p -> view p
+        Just p -> processFile p
 
-view :: String -> IO ()  
-view fileName = do  
+processFile :: String -> IO ()  
+processFile fileName = do  
     contents <- readFile fileName
-    putStr (case (parseConfig contents) of
-        Nothing -> "Cannot parse config"
-        Just c -> intercalate "/" (run c))
+    putStr . getResult . parseConfig $ contents
 
+getResult :: Maybe Config -> String
+getResult maybe =
+    case maybe of
+        Nothing -> "Cannot parse config"
+        Just config -> showStates . run $ config
 
 
 maybeHead :: [a]-> Maybe a
 maybeHead [] = Nothing
-maybeHead l = Just (head l)
+maybeHead list = Just . head $ list

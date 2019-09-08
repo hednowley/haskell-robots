@@ -7,15 +7,11 @@ import Text.Parsec.String
 import qualified Text.Parsec.Token as P
 import Text.Parsec.Language (haskellDef)
 import Walk
-                
-num :: Parser Integer
-num = do
-    n <- many1 digit
-    return (read n)
-    
+
+-- Try to parse the given string as a config file
 parseConfig :: String -> Maybe Config
 parseConfig contents = 
-    case (parse robotsFile "(unknown)" contents) of
+    case (parse robotsFile "" contents) of
         Prelude.Left _ -> Nothing
         Prelude.Right c -> Just c
 
@@ -34,19 +30,19 @@ dimensions =
         m <- num 
         return (n, m)
 
-position :: Parser Position
-position = 
+state :: Parser Walk.State
+state = 
     do
         char '('
-        n <- num
+        x <- num
         char ','
         spaces
-        m <- num 
+        y <- num 
         char ','
         spaces
-        o <- orientation
+        o <- Parse.orientation
         char ')'
-        return (n, m, o)
+        return (Walk.State x y o False)
 
 orientation :: Parser Orientation
 orientation = 
@@ -65,7 +61,13 @@ move =
 walk :: Parser Walk
 walk =
     do
-        initial <- position
+        initial <- state
         spaces
         moves <- many move
         return (Walk initial moves)
+
+-- Parse an integer
+num :: Parser Integer
+num = do
+    n <- many1 digit
+    return (read n)

@@ -3,7 +3,7 @@ module Walk
         Orientation(..)
         , Walk(..)
         , Move(..)
-        , Position
+        , State(..)
         , Dimensions
         , Config(..)
         , run
@@ -16,10 +16,16 @@ data Move = MoveForward | RotateLeft | RotateRight
 
 
 type Dimensions = (Integer, Integer)
-type Position = (Integer, Integer, Orientation)
+
+data State = State {
+    x :: Integer,
+    y :: Integer,
+    orientation :: Orientation,
+    isLost :: Bool
+}
 
 data Walk = Walk {
-    initial :: Position
+    initial :: State
     , moves :: [Move]
 }
         
@@ -28,27 +34,24 @@ data Config =  Config {
     , walks :: [Walk]
 }
 
+-- Get the final state of every walk
+run :: Config -> [State]
+run c = map (getFinalPosition . dims $ c) (walks c)
 
-run :: Config -> [String]
-run c = map (runSingle (dims c)) (walks c)
-
-
-runSingle  :: Dimensions -> Walk -> String
-runSingle dims walk =
-    let (x, y, o) = getFinalPosition dims walk
-    in show x ++ "/" ++ show y ++ showOrientation o ++ "//"
-
-
-getFinalPosition :: Dimensions -> Walk -> Position
+-- Apply all the walk's command and return its final state
+getFinalPosition :: Dimensions -> Walk -> State
 getFinalPosition dims walk =
-    foldl (\pos move -> applyMove dims move pos) (initial walk) (moves walk)
+    foldl (\state move -> applyMove dims move state) (initial walk) (moves walk)
 
-applyMove :: Dimensions -> Move -> Position -> Position
-applyMove dims move (x, y, o) =
+applyMove :: Dimensions -> Move -> State -> State
+applyMove dims move state =
+    if isLost state then state else
     case move of
-        MoveForward -> let new = moveForward (x, y, o) in if (isWithinBounds dims new) then new else (x, y, o)
-        RotateLeft -> (x, y, rotateLeft o)
-        RotateRight -> (x, y, rotateRight o)
+        MoveForward -> 
+            let moved = moveForward state
+            in if isWithinBounds dims moved then moved else state { isLost = True}
+        RotateLeft -> state { orientation = rotateLeft (orientation state) }
+        RotateRight -> state { orientation = rotateRight (orientation state) }
 
 
 rotateLeft :: Orientation -> Orientation
@@ -67,21 +70,15 @@ rotateRight o =
         South -> West
         West -> North
 
-moveForward :: Position -> Position
-moveForward (x, y, o) =
-    case o of
-        North -> (x, y + 1, o)
-        East -> (x + 1, y, o)
-        South -> (x, y - 1, o)
-        West -> (x - 1, y, o)
+moveForward :: State -> State
+moveForward state =
+    case orientation state of
+        North -> state { y = y state + 1}
+        East -> state { x = x state + 1}
+        South -> state { y = y state - 1}
+        West -> state { x = x state - 1}
 
-showOrientation :: Orientation -> String
-showOrientation o =
-    case o of
-        North -> "N"
-        East -> "E"
-        South -> "S"
-        West -> "W"
 
-isWithinBounds :: Dimensions -> Position -> Bool
-isWithinBounds (m, n) (x, y, _) = x > -1 && x < m && y > -1 && y < n
+-- Whether the given state lies within the box dimensions
+isWithinBounds :: Dimensions -> State -> Bool
+isWithinBounds (m, n) State { x=x, y=y } = x > -1 && x < m && y > -1 && y < n
