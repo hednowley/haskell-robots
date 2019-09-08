@@ -35,19 +35,18 @@ run c = map (runSingle (dims c)) (walks c)
 
 runSingle  :: Dimensions -> Walk -> String
 runSingle dims walk =
-    let (x, y) = getFinalPosition dims walk
-    in show(x) ++ "/" ++ show(y) ++ "//"
+    let (x, y, o) = getFinalPosition dims walk
+    in show x ++ "/" ++ show y ++ showOrientation o ++ "//"
 
 
 getFinalPosition :: Dimensions -> Walk -> Position
 getFinalPosition dims walk =
-    let apply = applyMove dims
-    in foldr (\pos move -> apply move pos) (initial walk) (moves walk)
+    foldl (\pos move -> applyMove dims move pos) (initial walk) (moves walk)
 
 applyMove :: Dimensions -> Move -> Position -> Position
 applyMove dims move (x, y, o) =
     case move of
-        MoveForward -> moveForward (x, y, o)
+        MoveForward -> let new = moveForward (x, y, o) in if (isWithinBounds dims new) then new else (x, y, o)
         RotateLeft -> (x, y, rotateLeft o)
         RotateRight -> (x, y, rotateRight o)
 
@@ -71,7 +70,18 @@ rotateRight o =
 moveForward :: Position -> Position
 moveForward (x, y, o) =
     case o of
-        North -> (y + 1, x, o)
-        East -> (y, x + 1, o)
-        South -> (y - 1, x, o)
-        West -> (y, x - 1, o)
+        North -> (x, y + 1, o)
+        East -> (x + 1, y, o)
+        South -> (x, y - 1, o)
+        West -> (x - 1, y, o)
+
+showOrientation :: Orientation -> String
+showOrientation o =
+    case o of
+        North -> "N"
+        East -> "E"
+        South -> "S"
+        West -> "W"
+
+isWithinBounds :: Dimensions -> Position -> Bool
+isWithinBounds (m, n) (x, y, _) = x > -1 && x < m && y > -1 && y < n
