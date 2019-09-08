@@ -5,7 +5,9 @@ module Lib
 import System.Environment   
 import System.IO  
 import Data.List
-import Data.Text
+import Parse
+import Walk
+
 
 someFunc :: IO ()
 someFunc = do  
@@ -20,24 +22,13 @@ process args =
 
 view :: String -> IO ()  
 view fileName = do  
-    handle <- openFile fileName ReadMode  
-    contents <- hGetContents handle  
-    putStr contents  
-    hClose handle 
+    contents <- readFile fileName
+    putStr (case (parseConfig contents) of
+        Nothing -> "Cannot parse config"
+        Just c -> intercalate "/" (run c))
 
-type Dimensions = (Int, Int)
 
-getDimensions :: String -> Maybe Dimensions
-getDimensions str =
-    case words str of
-        n : m -> ReadMaybe n
-        w -> Nothing
 
-words   :: String -> [String]
-words s =  case dropWhile Char.isSpace s of
-                      "" -> []
-                      s' -> w : words s''
-                            where (w, s'') = break Char.isSpace s'
-    
 maybeHead :: [a]-> Maybe a
-maybeHead list = if length list > 0 then Just (head list) else Nothing
+maybeHead [] = Nothing
+maybeHead l = Just (head l)
